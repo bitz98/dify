@@ -2,22 +2,18 @@ services:
   api:
     image: langgenius/dify-api:latest
     environment:
-      # --- Dify core ---
       SECRET_KEY: 9726ea166dd75de795a6ec129ef205099c2b58ab554a97526faf175057a89c6f
       CONSOLE_WEB_URL: http://localhost
       CONSOLE_API_URL: http://localhost/api
       DATABASE_URL: postgresql://dify:dify@db:5432/dify
       REDIS_URL: redis://redis:6379/0
       WEAVIATE_ENDPOINT: http://weaviate:8080
-      # --- Almacenamiento local (OpenDAL) ---
+      # Storage local (OpenDAL)
       STORAGE_TYPE: local
       STORAGE_LOCAL_PATH: /app/api/storage
       OPENDAL_SCHEME: fs
       OPENDAL_FS_ROOT: /app/api/storage
-    depends_on:
-      - db
-      - redis
-      - weaviate
+    depends_on: [db, redis, weaviate]
     volumes:
       - storage_data:/app/api/storage
     restart: unless-stopped
@@ -25,12 +21,12 @@ services:
   web:
     image: langgenius/dify-web:latest
     environment:
-      NEXT_PUBLIC_API_URL: /api      # <- clave
-      FORCE_RELOAD: "2025-08-15-01"  # <- cualquier valor nuevo para forzar recreación
-    depends_on:
-      - api
+      # Muy importante: que el front llame al mismo origen, vía Nginx
+      NEXT_PUBLIC_API_URL: /api
+      # Truco para forzar que EasyPanel recree el contenedor web
+      FORCE_RELOAD: "bump-2025-08-15-02"
+    depends_on: [api]
     restart: unless-stopped
-
 
   worker:
     image: langgenius/dify-api:latest
@@ -46,9 +42,7 @@ services:
       STORAGE_LOCAL_PATH: /app/api/storage
       OPENDAL_SCHEME: fs
       OPENDAL_FS_ROOT: /app/api/storage
-    depends_on:
-      - db
-      - redis
+    depends_on: [db, redis]
     volumes:
       - storage_data:/app/api/storage
     restart: unless-stopped
@@ -80,11 +74,9 @@ services:
 
   nginx:
     image: nginx:alpine
-    depends_on:
-      - web
-      - api
+    depends_on: [web, api]
     ports:
-      - "8081:80"  # si choca, cambia a "8082:80" y entra por ese puerto
+      - "8090:80"   # <<< puerto nuevo para evitar conflicto
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
