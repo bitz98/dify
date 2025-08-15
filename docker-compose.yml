@@ -9,7 +9,7 @@ services:
       DATABASE_URL: postgresql://dify:dify@db:5432/dify
       REDIS_URL: redis://redis:6379/0
       WEAVIATE_ENDPOINT: http://weaviate:8080
-      # --- Almacenamiento local con OpenDAL (clave del error) ---
+      # --- Almacenamiento local (OpenDAL) ---
       STORAGE_TYPE: local
       STORAGE_LOCAL_PATH: /app/api/storage
       OPENDAL_SCHEME: fs
@@ -25,8 +25,8 @@ services:
   web:
     image: langgenius/dify-web:latest
     environment:
-      # el front habla interno con el servicio "api"
-      NEXT_PUBLIC_API_URL: http://api:5001
+      # IMPORTANTE: usa /api para que el navegador hable con Nginx (mismo origen)
+      NEXT_PUBLIC_API_URL: /api
     depends_on:
       - api
     restart: unless-stopped
@@ -83,7 +83,7 @@ services:
       - web
       - api
     ports:
-      - "8081:80"             # si choca, cambia a "8082:80"
+      - "8081:80"  # si choca, cambia a "8082:80" y entra por ese puerto
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
