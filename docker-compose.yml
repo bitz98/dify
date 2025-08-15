@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  api:
+    image: langgenius/dify-api:latest
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      CONSOLE_WEB_URL: ${CONSOLE_WEB_URL}
+      CONSOLE_API_URL: ${CONSOLE_API_URL}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      WEAVIATE_ENDPOINT: ${WEAVIATE_ENDPOINT}
+      FILES_STORAGE: ${FILES_STORAGE}
+    ports:
+      - "5001:5001"
+    depends_on:
+      - db
+      - redis
+      - weaviate
+    restart: unless-stopped
+
+  web:
+    image: langgenius/dify-web:latest
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:5001
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  worker:
+    image: langgenius/dify-api:latest
+    command: ["bash","-lc","celery -A app.celery worker -Q default,agent,paraphrase -l INFO"]
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      CONSOLE_WEB_URL: ${CONSOLE_WEB_URL}
+      CONSOLE_API_URL: ${CONSOLE_API_URL}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      WEAVIATE_ENDPOINT: ${WEAVIATE_ENDPOINT}
+      FILES_STORAGE: ${FILES_STORAGE}
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dify
+      POSTGRES_PASSWORD: dify
+      POSTGRES_DB: dify
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    command: ["redis-server","--save",""]
+    restart: unless-stopped
+
+  weaviate:
+    image: semitechnologies/weaviate:1.20.0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - web
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  weaviate_data:
