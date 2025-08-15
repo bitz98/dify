@@ -1,17 +1,8 @@
 services:
   api:
     image: langgenius/dify-api:latest
-    environment:
-      SECRET_KEY: ${SECRET_KEY}
-      CONSOLE_WEB_URL: ${CONSOLE_WEB_URL}
-      CONSOLE_API_URL: ${CONSOLE_API_URL}
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      WEAVIATE_ENDPOINT: ${WEAVIATE_ENDPOINT}
-      STORAGE_TYPE: ${STORAGE_TYPE}
-      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH}
-      OPENDAL_SCHEME: ${OPENDAL_SCHEME}
-      OPENDAL_FS_ROOT: ${OPENDAL_FS_ROOT}
+    env_file:
+      - .env
     depends_on:
       - db
       - redis
@@ -31,17 +22,8 @@ services:
   worker:
     image: langgenius/dify-api:latest
     command: ["bash","-lc","celery -A app.celery worker -Q default,agent,paraphrase -l INFO"]
-    environment:
-      SECRET_KEY: ${SECRET_KEY}
-      CONSOLE_WEB_URL: ${CONSOLE_WEB_URL}
-      CONSOLE_API_URL: ${CONSOLE_API_URL}
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      WEAVIATE_ENDPOINT: ${WEAVIATE_ENDPOINT}
-      STORAGE_TYPE: ${STORAGE_TYPE}
-      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH}
-      OPENDAL_SCHEME: ${OPENDAL_SCHEME}
-      OPENDAL_FS_ROOT: ${OPENDAL_FS_ROOT}
+    env_file:
+      - .env
     depends_on:
       - db
       - redis
@@ -49,7 +31,30 @@ services:
       - storage_data:/app/api/storage
     restart: unless-stopped
 
-  # ... db, redis, weaviate igual ...
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: dify
+      POSTGRES_PASSWORD: dify
+      POSTGRES_DB: dify
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    command: ["redis-server","--save",""]
+    restart: unless-stopped
+
+  weaviate:
+    image: semitechnologies/weaviate:1.20.0
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
