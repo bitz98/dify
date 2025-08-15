@@ -25,11 +25,12 @@ services:
   web:
     image: langgenius/dify-web:latest
     environment:
-      # IMPORTANTE: usa /api para que el navegador hable con Nginx (mismo origen)
-      NEXT_PUBLIC_API_URL: /api
+      NEXT_PUBLIC_API_URL: /api      # <- clave
+      FORCE_RELOAD: "2025-08-15-01"  # <- cualquier valor nuevo para forzar recreación
     depends_on:
       - api
     restart: unless-stopped
+
 
   worker:
     image: langgenius/dify-api:latest
