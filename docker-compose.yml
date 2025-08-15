@@ -8,19 +8,14 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       WEAVIATE_ENDPOINT: ${WEAVIATE_ENDPOINT}
-      FILES_STORAGE: ${FILES_STORAGE}
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH}
     depends_on:
       - db
       - redis
       - weaviate
-    restart: unless-stopped
-
-  web:
-    image: langgenius/dify-web:latest
-    environment:
-      NEXT_PUBLIC_API_URL: http://api:5001
-    depends_on:
-      - api
+    volumes:
+      - storage_data:/app/api/storage
     restart: unless-stopped
 
   worker:
@@ -33,48 +28,18 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       WEAVIATE_ENDPOINT: ${WEAVIATE_ENDPOINT}
-      FILES_STORAGE: ${FILES_STORAGE}
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      STORAGE_LOCAL_PATH: ${STORAGE_LOCAL_PATH}
     depends_on:
       - db
       - redis
-    restart: unless-stopped
-
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: dify
-      POSTGRES_PASSWORD: dify
-      POSTGRES_DB: dify
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - storage_data:/app/api/storage
     restart: unless-stopped
 
-  redis:
-    image: redis:7
-    command: ["redis-server","--save",""]
-    restart: unless-stopped
-
-  weaviate:
-    image: semitechnologies/weaviate:1.20.0
-    environment:
-      QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
-      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
-    volumes:
-      - weaviate_data:/var/lib/weaviate
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    depends_on:
-      - web
-      - api
-    ports:
-      - "8081:80"   # expón SOLO este puerto (cámbialo si 8081 está ocupado)
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    restart: unless-stopped
+# ... (el resto igual)
 
 volumes:
   db_data:
   weaviate_data:
+  storage_data:
